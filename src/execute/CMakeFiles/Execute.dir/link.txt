@@ -1,0 +1,2 @@
+/usr/bin/ar qc libExecute.a  CMakeFiles/Execute.dir/Command.cpp.o CMakeFiles/Execute.dir/Add.cpp.o CMakeFiles/Execute.dir/Append.cpp.o CMakeFiles/Execute.dir/Get.cpp.o CMakeFiles/Execute.dir/Set.cpp.o CMakeFiles/Execute.dir/Replace.cpp.o CMakeFiles/Execute.dir/Stats.cpp.o
+/usr/bin/ranlib libExecute.a

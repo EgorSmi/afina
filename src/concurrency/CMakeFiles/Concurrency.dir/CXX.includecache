@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/egor/Рабочий стол/afina/src/concurrency/Executor.cpp
+afina/concurrency/Executor.h
+-
+
+include/afina/concurrency/Executor.h
+condition_variable
+-
+functional
+-
+memory
+-
+mutex
+-
+queue
+-
+string
+-
+thread
+-
+

@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/egor/Рабочий стол/afina/src/allocator/Pointer.cpp
+afina/allocator/Pointer.h
+-
+
+/home/egor/Рабочий стол/afina/src/allocator/Simple.cpp
+afina/allocator/Simple.h
+-
+afina/allocator/Pointer.h
+-
+
+include/afina/allocator/Pointer.h
+
+include/afina/allocator/Simple.h
+string
+-
+cstddef
+-
+
