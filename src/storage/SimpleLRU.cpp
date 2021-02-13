@@ -1,4 +1,5 @@
 #include "SimpleLRU.h"
+#include <iostream>
 
 namespace Afina {
 namespace Backend {
@@ -29,7 +30,7 @@ void SimpleLRU::transfer_fresh(lru_node* node)
     lru_node* next = node->next.get();
     if (next != nullptr)
     {
-      // _lru_head.get() == nullptr after std::move(_lru_head) !!!!!! F***
+      // _lru_head.get() == nullptr after std::move(_lru_head) !!!!! thx
       std::unique_ptr<lru_node> tmp = std::move(_lru_head);
       tmp.get()->prev = node;
       _lru_head = std::move(prev->next);
@@ -104,12 +105,9 @@ void SimpleLRU::insert(lru_node* node)
 
 void SimpleLRU::change_pair(lru_node& node, const std::string& new_value)
 {
-  std::size_t new_size = new_value.size() - node.value.size();
+  int new_size = new_value.size() - node.value.size(); // here must be int not size_t
   node.value = new_value;
   transfer_fresh(&node); // prototype: transfer_fresh(lru_node*)
-  // update Index
-  _lru_index.insert(std::make_pair(std::reference_wrapper<const std::string>(node.key),
-                       std::reference_wrapper<lru_node>(node)));
   while(_cur_size + new_size > _max_size)
   {
     drop_tail();

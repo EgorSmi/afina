@@ -9,7 +9,7 @@ const std::string Version_Major = "0";
 const std::string Version_Minor = "0";
 const std::string Version_Patch = "0";
 const std::string Version_Release = "";
-const std::string Version_SHA =  "ga436";
+const std::string Version_SHA =  "g06ce";
 
 std::string get_version() {
   std::stringstream app_string;

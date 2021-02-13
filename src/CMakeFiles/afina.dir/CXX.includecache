@@ -6,6 +6,14 @@
 
 #IncludeRegexTransform: 
 
+/home/egor/Рабочий стол/afina/src/Version.cpp
+afina/Version.h
+-
+string
+-
+sstream
+-
+
 /home/egor/Рабочий стол/afina/src/logging/ServiceImpl.h
 afina/logging/Config.h
 -
