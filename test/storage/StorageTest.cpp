@@ -195,3 +195,15 @@ TEST(StorageTest, MaxTest) {
         EXPECT_FALSE(storage.Get(key, res));
     }
 }
+
+TEST(StorageTest, SHORT_NEW_VALUE){
+    // change long word to shorter one. if _cur_size doesn't change,
+    // adding new node will drop previous, so it's problem.
+    SimpleLRU storage(20);
+    EXPECT_TRUE(storage.Put("KEY", "VALUE"));
+    EXPECT_TRUE(storage.Put("KEY1", "VAL1"));
+    EXPECT_TRUE(storage.Put("KEY1", "VAL"));
+    std::string res;
+    EXPECT_TRUE(storage.Get("KEY", res));
+    EXPECT_TRUE(storage.Get("KEY1", res));
+}
