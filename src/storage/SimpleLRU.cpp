@@ -106,12 +106,12 @@ void SimpleLRU::insert(lru_node* node)
 void SimpleLRU::change_pair(lru_node& node, const std::string& new_value)
 {
   int new_size = new_value.size() - node.value.size(); // here must be int not size_t
-  node.value = new_value;
   transfer_fresh(&node); // prototype: transfer_fresh(lru_node*)
   while(_cur_size + new_size > _max_size)
   {
     drop_tail();
   }
+  node.value = new_value;
   _cur_size += new_size;
 }
 
