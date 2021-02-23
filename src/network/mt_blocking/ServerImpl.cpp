@@ -83,11 +83,11 @@ void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
 
 // See Server.h
 void ServerImpl::Stop() {
-    running.store(false);
     std::lock_guard<std::mutex> lock(_client_sockets_m);
-    for (int i = 0; i < _client_sockets.size(); i++)
+    running.store(false);
+    for (int i : _client_sockets)
     {
-        shutdown(_client_sockets[i], SHUT_RD);
+        shutdown(i, SHUT_RD);
     }
     shutdown(_server_socket, SHUT_RDWR);
 }
@@ -101,10 +101,6 @@ void ServerImpl::Join() {
     {
         _cv.wait(lock);
     }
-    // close(_server_socket);
-    // why?? we claim that more than one thread
-    // can use Server and execute Server->Join(), so we don't have to close
-    // server socket descriptor.. as i see
 }
 
 // See Server.h
@@ -151,33 +147,32 @@ void ServerImpl::OnRun() {
         }
 
         // TODO: Start new thread and process data from/to connection
-        if (_client_sockets.size() <= _n_workers)
         {
             std::lock_guard<std::mutex> lock(_client_sockets_m);
-            _client_sockets.emplace_back(client_socket);
-            // start new thread
-            std::thread(&ServerImpl::Worker, this, client_socket).detach();
-        }
-        else
-        {
-            close(client_socket);
+            if ((_client_sockets.size() <= _n_workers) && (running.load())) {
+                _client_sockets.emplace(client_socket);
+                // start new thread
+                std::thread(&ServerImpl::Worker, this, client_socket).detach();
+            } else {
+                close(client_socket);
+            }
         }
     }
-
     // Cleanup on exit...
     _logger->warn("Network stopped");
+    close(_server_socket);
 }
 
 void ServerImpl::Worker(int client_socket)
 {
-    std::size_t arg_remains;
+    std::size_t arg_remains = 0;
     Protocol::Parser parser;
     std::string argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
 
     try {
         int readed_bytes = -1;
-        char client_buffer[4096];
+        char client_buffer[4096] = "";
         while ((readed_bytes = read(client_socket, client_buffer, sizeof(client_buffer))) > 0) {
             _logger->debug("Got {} bytes from socket", readed_bytes);
 
@@ -258,11 +253,7 @@ void ServerImpl::Worker(int client_socket)
     {
         std::lock_guard<std::mutex> lock(_client_sockets_m);
         close(client_socket);
-        auto it = std::find(_client_sockets.begin(), _client_sockets. end(), client_socket);
-        if (it != _client_sockets.end())
-        {
-            _client_sockets.erase(it);
-        }
+        _client_sockets.erase(client_socket);
 
         // notify
         if (_client_sockets.empty())
