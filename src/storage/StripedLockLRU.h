@@ -7,6 +7,7 @@
 #include <array>
 
 #include "SimpleLRU.h"
+#include "ThreadSafeSimpleLRU.h"
 #include <afina/Storage.h>
 
 namespace Afina {
@@ -18,7 +19,7 @@ public:
     {
         for (std::size_t i = 0; i < _count; i++)
         {
-            _cashes.emplace_back(new SimpleLRU(max_shard_size));
+            _cashes.emplace_back(new ThreadSafeSimpleLRU(max_shard_size));
         }
     }
     bool Put(const std::string &key, const std::string &value) override {
