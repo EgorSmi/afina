@@ -23,6 +23,7 @@
 
 #include "storage/SimpleLRU.h"
 #include "storage/ThreadSafeSimpleLRU.h"
+#include "storage/StripedLockLRU.h"
 
 using namespace Afina;
 
@@ -46,7 +47,7 @@ public:
         logService.reset(new Logging::ServiceImpl(logConfig));
 
         // Step 1: configure storage
-        std::string storage_type = "st_lru";
+        std::string storage_type = "mt_slru";
         if (options.count("storage") > 0) {
             storage_type = options["storage"].as<std::string>();
         }
@@ -55,9 +56,12 @@ public:
             storage = std::make_shared<Afina::Backend::SimpleLRU>();
         } else if (storage_type == "mt_lru") {
             storage = std::make_shared<Afina::Backend::ThreadSafeSimplLRU>();
+        } else if (storage_type == "mt_slru") {
+            // std::make_shared<> for constructor
+            storage.reset(Afina::Backend::StripedLockLRU::create_cash(2, 16 * 1024 * 1024));
         } else {
-            throw std::runtime_error("Unknown storage type");
-        }
+                throw std::runtime_error("Unknown storage type");
+            }
 
         // Step 2: Configure network
         std::string network_type = "st_block";

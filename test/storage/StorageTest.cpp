@@ -11,6 +11,7 @@
 #include <afina/execute/Set.h>
 
 #include "storage/SimpleLRU.h"
+#include "storage/StripedLockLRU.h"
 
 using namespace Afina::Backend;
 using namespace Afina::Execute;
@@ -194,4 +195,14 @@ TEST(StorageTest, MaxTest) {
         std::string res;
         EXPECT_FALSE(storage.Get(key, res));
     }
+}
+
+TEST(StorageTest, Striped)
+{
+    StripedLockLRU* storage = StripedLockLRU::create_cash(2, 16 * 1024 * 1024);
+    std::string value;
+    EXPECT_TRUE(storage->Put("KEY1", "Value"));
+    EXPECT_TRUE(storage->Get("KEY1", value));
+    EXPECT_TRUE(value == "Value");
+    delete storage;
 }
