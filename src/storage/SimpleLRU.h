@@ -19,7 +19,7 @@ class SimpleLRU : public Afina::Storage {
 public:
     SimpleLRU(size_t max_size = 1024, size_t cur_size = 0) : _max_size(max_size),
      _cur_size(cur_size), _lru_tail(nullptr) {}
-
+     SimpleLRU(SimpleLRU&&) = default;
     ~SimpleLRU() {
         _lru_index.clear();
         while ((_lru_tail != nullptr) && (_lru_tail != _lru_head.get()))

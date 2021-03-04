@@ -19,35 +19,35 @@ public:
     {
         for (std::size_t i = 0; i < _count; i++)
         {
-            _cashes.emplace_back(new ThreadSafeSimpleLRU(max_shard_size));
+            _cashes.emplace_back(max_shard_size);
         }
     }
     bool Put(const std::string &key, const std::string &value) override {
         std::hash<std::string> _hash;
-        return _cashes[_hash(key) % _count]->Put(key, value);
+        return _cashes[_hash(key) % _count].Put(key, value);
     }
     bool PutIfAbsent(const std::string &key, const std::string &value) override {
         std::hash<std::string> _hash;
-        return _cashes[_hash(key) % _count]->PutIfAbsent(key, value);
+        return _cashes[_hash(key) % _count].PutIfAbsent(key, value);
     }
     bool Set(const std::string &key, const std::string &value) override {
         std::hash<std::string> _hash;
-        return _cashes[_hash(key) % _count]->Set(key, value);
+        return _cashes[_hash(key) % _count].Set(key, value);
     }
     bool Delete(const std::string &key) override {
         std::hash<std::string> _hash;
-        return _cashes[_hash(key) % _count]->Delete(key);
+        return _cashes[_hash(key) % _count].Delete(key);
     }
     bool Get(const std::string &key, std::string &value) override {
         std::hash<std::string> _hash;
-        return _cashes[_hash(key) % _count]->Get(key, value);
+        return _cashes[_hash(key) % _count].Get(key, value);
     }
     ~StripedLockLRU() {}
 
 private:
     size_t _count;
     size_t _max_size;
-    std::vector<std::unique_ptr<SimpleLRU>> _cashes;
+    std::vector<SimpleLRU> _cashes;
 };
 
 } // end Backend

@@ -47,7 +47,7 @@ public:
         logService.reset(new Logging::ServiceImpl(logConfig));
 
         // Step 1: configure storage
-        std::string storage_type = "mt_slru";
+        std::string storage_type = "st_lru";
         if (options.count("storage") > 0) {
             storage_type = options["storage"].as<std::string>();
         }
@@ -55,7 +55,7 @@ public:
         if (storage_type == "st_lru") {
             storage = std::make_shared<Afina::Backend::SimpleLRU>();
         } else if (storage_type == "mt_lru") {
-            storage = std::make_shared<Afina::Backend::ThreadSafeSimplLRU>();
+            storage = std::make_shared<Afina::Backend::ThreadSafeSimpleLRU>();
         } else if (storage_type == "mt_slru") {
             // std::make_shared<> for constructor
             storage.reset(Afina::Backend::StripedLockLRU::create_cash(2, 16 * 1024 * 1024));
