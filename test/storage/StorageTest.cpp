@@ -199,10 +199,9 @@ TEST(StorageTest, MaxTest) {
 
 TEST(StorageTest, Striped)
 {
-    StripedLockLRU* storage = StripedLockLRU::create_cash(2, 16 * 1024 * 1024);
+    std::unique_ptr<StripedLockLRU> storage = StripedLockLRU::create_cash(2, 16 * 1024 * 1024);
     std::string value;
     EXPECT_TRUE(storage->Put("KEY1", "Value"));
     EXPECT_TRUE(storage->Get("KEY1", value));
     EXPECT_TRUE(value == "Value");
-    delete storage;
 }

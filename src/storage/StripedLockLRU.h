@@ -4,7 +4,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
-#include <array>
 
 #include "SimpleLRU.h"
 #include "ThreadSafeSimpleLRU.h"
@@ -14,14 +13,7 @@ namespace Afina {
 namespace Backend {
 class StripedLockLRU : public Afina::Storage {
 public:
-    static StripedLockLRU* create_cash(std::size_t count, std::size_t max_size);
-    StripedLockLRU(size_t count = 16, std::size_t max_shard_size = 1024) : _count(count)
-    {
-        for (std::size_t i = 0; i < _count; i++)
-        {
-            _cashes.emplace_back(max_shard_size);
-        }
-    }
+    static std::unique_ptr<StripedLockLRU> create_cash(std::size_t count, std::size_t max_size);
     bool Put(const std::string &key, const std::string &value) override {
         std::hash<std::string> _hash;
         return _cashes[_hash(key) % _count].Put(key, value);
@@ -45,6 +37,13 @@ public:
     ~StripedLockLRU() {}
 
 private:
+    StripedLockLRU(size_t count = 16, std::size_t max_shard_size = 1024) : _count(count), _max_size(_count * max_shard_size)
+    {
+        for (std::size_t i = 0; i < _count; i++)
+        {
+            _cashes.emplace_back(max_shard_size);
+        }
+    }
     size_t _count;
     size_t _max_size;
     std::vector<SimpleLRU> _cashes;
