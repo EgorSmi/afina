@@ -37,7 +37,7 @@ public:
     ~StripedLockLRU() {}
 
 private:
-    StripedLockLRU(size_t count = 16, std::size_t max_shard_size = 1024) : _count(count), _max_size(_count * max_shard_size)
+    StripedLockLRU(size_t count = 16, std::size_t max_shard_size = 1024) : _count(count)
     {
         for (std::size_t i = 0; i < _count; i++)
         {
@@ -45,7 +45,6 @@ private:
         }
     }
     size_t _count;
-    size_t _max_size;
     std::vector<SimpleLRU> _cashes;
 };
 
