@@ -23,6 +23,7 @@
 #include <afina/Storage.h>
 #include <afina/execute/Command.h>
 #include <afina/logging/Service.h>
+#include <afina/concurrency/Executor.h>
 
 #include "protocol/Parser.h"
 
@@ -114,6 +115,7 @@ void ServerImpl::OnRun() {
     Protocol::Parser parser;
     std::string argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
+    Afina::Concurrency::Executor executor("Sockets", 64, 2, 4, 100);
     while (running.load()) {
         _logger->debug("waiting for connection...");
 
@@ -149,10 +151,15 @@ void ServerImpl::OnRun() {
         // TODO: Start new thread and process data from/to connection
         {
             std::lock_guard<std::mutex> lock(_client_sockets_m);
-            if ((_client_sockets.size() <= _n_workers) && (running.load())) {
-                _client_sockets.emplace(client_socket);
-                // start new thread
-                std::thread(&ServerImpl::Worker, this, client_socket).detach();
+            if (running) {
+                if (executor.Execute(&ServerImpl::Worker, this, client_socket))
+                {
+                    _client_sockets.emplace(client_socket);
+                }
+                else
+                {
+                    close(client_socket);
+                }
             } else {
                 close(client_socket);
             }
