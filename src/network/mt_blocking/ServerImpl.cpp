@@ -97,11 +97,6 @@ void ServerImpl::Stop() {
 void ServerImpl::Join() {
     assert(_thread.joinable());
     _thread.join(); // OnRun()
-    std::unique_lock<std::mutex> lock(_m);
-    while (!_client_sockets.empty())
-    {
-        _cv.wait(lock);
-    }
 }
 
 // See Server.h

@@ -84,7 +84,7 @@ public:
         // Enqueue new task
         {
             std::unique_lock<std::mutex> lock(pool_mutex);
-            if ((threads.size() < _high_watermark) && (_cur_queue_size++ > _low_watermark))
+            if ((threads.size() < _high_watermark) && (_cur_queue_size++ >= _low_watermark))
             {
                 threads.emplace_back(std::thread([this] {return perform(this); }));
             }
@@ -117,8 +117,8 @@ private:
                 auto cv_flag = executor->empty_condition.wait_until(lock,
                                                                     now + std::chrono::milliseconds(executor->_idle_time));
                 if (((cv_flag == std::cv_status::timeout) && (executor->tasks.empty()) &&
-                (executor->threads.size() > executor->_low_watermark)
-                ) || (executor->state != State::kRun))
+                (executor->threads.size() > executor->_low_watermark))
+                 || (executor->state != State::kRun))
                 {
                     if (executor->state == Executor::State::kRun)
                     {
