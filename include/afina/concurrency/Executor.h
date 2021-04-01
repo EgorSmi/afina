@@ -10,6 +10,7 @@
 #include <thread>
 #include <iostream>
 #include <chrono>
+#include <algorithm>
 
 namespace Afina {
 namespace Concurrency {
@@ -56,13 +57,17 @@ public:
     {
         std::unique_lock<std::mutex> state_lock(mutex);
         state = State::kStopping;
+        state_lock.unlock();
         empty_condition.notify_all(); // to stop
+        state_lock.lock();
         if (await == true)
         {
-            for (std::size_t i = 0; i<threads.size(); i++)
-                threads[i].join();
+            stop_condition.wait(state_lock);
         }
-        state = State::kStopped;
+        if (threads.empty())
+        {
+            state = State::kStopped;
+        }
     }
 
     /**
@@ -82,12 +87,9 @@ public:
         }
 
         // Enqueue new task
+        if ((threads.size() < _high_watermark) && (_cur_queue_size++ >= 0))
         {
-            std::unique_lock<std::mutex> lock(pool_mutex);
-            if ((threads.size() < _high_watermark) && (_cur_queue_size++ >= _low_watermark))
-            {
-                threads.emplace_back(std::thread([this] {return perform(this); }));
-            }
+            threads.emplace_back(std::thread([this] {return perform(this); }));
         }
         tasks.push_back(exec);
         empty_condition.notify_one();
@@ -107,9 +109,10 @@ private:
     friend void perform(Executor *executor)
     {
         std::unique_lock<std::mutex> lock(executor->mutex);
-        const std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-        while (executor->state == State::kRun)
+        bool goto_delete = false;
+        while ((executor->state == State::kRun) || (!executor->tasks.empty()))
         {
+            const std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
             std::function<void()> task; // task to perform
             while (executor->tasks.empty())
             {
@@ -120,28 +123,50 @@ private:
                 (executor->threads.size() > executor->_low_watermark))
                  || (executor->state != State::kRun))
                 {
-                    if (executor->state == Executor::State::kRun)
+                    if (executor->state != State::kStopping)
                     {
-                        std::unique_lock<std::mutex> pool_lock(executor->pool_mutex);
+                        // need to delete if not stopping
                         auto thread_id = std::this_thread::get_id();
                         auto it = std::find_if(executor->threads.begin(), executor->threads.end(),
                                                [thread_id] (std::thread &t) { return t.get_id() == thread_id; });
+                        (*it).detach();
                         executor->threads.erase(it);
+                        return;
                     }
-                    return;
+                    else
+                    {
+                        goto_delete = true;
+                        break;
+                    }
                 }
+            }
+            if (goto_delete)
+            {
+                break;
             }
             task = std::move(executor->tasks.front()); // take task from queue
             executor->_cur_queue_size--;
             executor->tasks.pop_front(); // destroy first element
+            lock.unlock();
             try
             {
                 task();
             }
-            catch(...)
+            catch(const std::exception e)
             {
-                std::cout<<"Task error"<<std::endl;
+                std::cout<<e.what()<<std::endl;
             }
+            lock.lock();
+        }
+        // Stopping thread pool
+        auto thread_id = std::this_thread::get_id();
+        auto it = std::find_if(executor->threads.begin(), executor->threads.end(),
+                               [thread_id] (std::thread &t) { return t.get_id() == thread_id; });
+        (*it).detach();
+        executor->threads.erase(it);
+        if (executor->threads.empty())
+        {
+            executor->stop_condition.notify_all();
         }
     }
 
@@ -155,6 +180,7 @@ private:
      */
     std::condition_variable empty_condition;
 
+    std::condition_variable stop_condition;
     /**
      * Vector of actual threads that perform execution
      */
@@ -176,6 +202,7 @@ private:
     std::size_t _high_watermark;
     std::size_t _idle_time;
     std::size_t _cur_queue_size;
+    std::size_t _working_threads;
 };
 
 } // namespace Concurrency
