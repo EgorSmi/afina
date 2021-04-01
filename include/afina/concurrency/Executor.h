@@ -202,7 +202,6 @@ private:
     std::size_t _high_watermark;
     std::size_t _idle_time;
     std::size_t _cur_queue_size;
-    std::size_t _working_threads;
 };
 
 } // namespace Concurrency
