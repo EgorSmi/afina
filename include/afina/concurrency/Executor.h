@@ -33,7 +33,7 @@ class Executor {
 public:
     Executor(std::string name, std::size_t size, std::size_t low_watermark, std::size_t high_watermark,
              std::size_t idle_time): state(State::kRun), _name(name), _max_queue_size(size), _low_watermark(low_watermark),
-                                     _high_watermark(high_watermark), _idle_time(idle_time), _cur_queue_size(0)
+                                     _high_watermark(high_watermark), _idle_time(idle_time), _cur_queue_size(0), _working_threads(0)
     {
         std::unique_lock<std::mutex> lock(pool_mutex);
         for (std::size_t t=0; t < _low_watermark; t++)
@@ -57,9 +57,7 @@ public:
     {
         std::unique_lock<std::mutex> state_lock(mutex);
         state = State::kStopping;
-        state_lock.unlock();
         empty_condition.notify_all(); // to stop
-        state_lock.lock();
         if (await == true)
         {
             stop_condition.wait(state_lock);
@@ -87,7 +85,7 @@ public:
         }
 
         // Enqueue new task
-        if ((threads.size() < _high_watermark) && (_cur_queue_size++ >= 0))
+        if ((threads.size() < _high_watermark) && (_cur_queue_size++ >= 0) && (threads.size() == _working_threads))
         {
             threads.emplace_back(std::thread([this] {return perform(this); }));
         }
@@ -142,11 +140,12 @@ private:
             }
             if (goto_delete)
             {
-                break;
+                continue;
             }
             task = std::move(executor->tasks.front()); // take task from queue
             executor->_cur_queue_size--;
             executor->tasks.pop_front(); // destroy first element
+            executor->_working_threads++;
             lock.unlock();
             try
             {
@@ -157,6 +156,7 @@ private:
                 std::cout<<e.what()<<std::endl;
             }
             lock.lock();
+            executor->_working_threads--;
         }
         // Stopping thread pool
         auto thread_id = std::this_thread::get_id();
@@ -166,6 +166,7 @@ private:
         executor->threads.erase(it);
         if (executor->threads.empty())
         {
+            executor->state = State::kStopped;
             executor->stop_condition.notify_all();
         }
     }
@@ -202,6 +203,7 @@ private:
     std::size_t _high_watermark;
     std::size_t _idle_time;
     std::size_t _cur_queue_size;
+    std::size_t _working_threads;
 };
 
 } // namespace Concurrency
