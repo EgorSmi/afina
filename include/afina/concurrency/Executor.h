@@ -58,7 +58,7 @@ public:
         std::unique_lock<std::mutex> state_lock(mutex);
         state = State::kStopping;
         empty_condition.notify_all(); // to stop
-        if (await == true)
+        if (await == true && !threads.empty())
         {
             stop_condition.wait(state_lock);
         }
