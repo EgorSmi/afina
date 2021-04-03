@@ -60,7 +60,10 @@ public:
         empty_condition.notify_all(); // to stop
         if (await == true && !threads.empty())
         {
-            stop_condition.wait(state_lock);
+            while(!threads.empty())
+            {
+                stop_condition.wait(state_lock);
+            }
         }
         if (threads.empty())
         {
