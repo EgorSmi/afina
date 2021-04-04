@@ -46,6 +46,7 @@ private:
     // logger to use
     std::shared_ptr<spdlog::logger> _logger;
 
+
     // Port to listen for new connections, permits access only from
     // inside of accept_thread
     // Read-only

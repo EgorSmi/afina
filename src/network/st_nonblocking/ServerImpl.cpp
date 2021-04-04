@@ -86,15 +86,13 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 // See Server.h
 void ServerImpl::Stop() {
     _logger->warn("Stop network service");
-
-    // Wakeup threads that are sleep on epoll_wait
-    if (eventfd_write(_event_fd, 1)) {
-        throw std::runtime_error("Failed to wakeup workers");
-    }
-
     for (const auto& connection : connections)
     {
         shutdown(connection->_socket, SHUT_WR);
+    }
+    // Wakeup threads that are sleep on epoll_wait
+    if (eventfd_write(_event_fd, 1)) {
+        throw std::runtime_error("Failed to wakeup workers");
     }
 }
 
@@ -226,7 +224,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
         }
 
         // Register the new FD to be monitored by epoll.
-        Connection *pc = new(std::nothrow) Connection(infd);
+        Connection *pc = new(std::nothrow) Connection(infd, pStorage, _logger);
         if (pc == nullptr) {
             throw std::runtime_error("Failed to allocate connection");
         }
