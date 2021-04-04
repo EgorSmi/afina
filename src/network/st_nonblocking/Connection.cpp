@@ -16,6 +16,7 @@ void Connection::Start()
 {
     flag_run = true;
     _event.events = EPOLLERR | EPOLLHUP | EPOLLIN;
+    output_offset = 0;
     _logger->debug("Start socket {}", _socket);
 }
 
@@ -88,7 +89,7 @@ void Connection::DoRead()
 
                     // Send response
                     result += "\r\n";
-                    output_buffer.emplace_back(result);
+                    output_buffer.push_back(result);
                     if (!output_buffer.empty())
                     {
                         _event.events |= EPOLLOUT;
@@ -111,8 +112,11 @@ void Connection::DoRead()
             throw std::runtime_error(std::string(strerror(errno)));
         }
     } catch (std::runtime_error &ex) {
-        _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
-        flag_run = false;
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
+            flag_run = false;
+        }
     }
 }
 
@@ -152,7 +156,7 @@ void Connection::DoWrite()
             {
                 throw std::runtime_error(std::string(strerror(errno)));
             }
-            if (output_buffer.size() < limit - 20)
+            if (output_buffer.size() <= limit - 20)
             {
                 _event.events |= EPOLLIN;
             }
@@ -162,8 +166,11 @@ void Connection::DoWrite()
             }
         }
         catch (std::runtime_error &ex) {
-            _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
-            flag_run = false;
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
+                flag_run = false;
+            }
         }
     }
 }

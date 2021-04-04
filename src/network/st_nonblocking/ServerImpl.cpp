@@ -167,7 +167,7 @@ void ServerImpl::OnRun() {
                 }
 
                 connections.erase(pc);
-                shutdown(pc->_socket, SHUT_RDWR);
+                //shutdown(pc->_socket, SHUT_RDWR);
                 close(pc->_socket);
                 pc->OnClose();
 
@@ -177,7 +177,7 @@ void ServerImpl::OnRun() {
                     _logger->error("Failed to change connection event mask");
 
                     connections.erase(pc);
-                    shutdown(pc->_socket, SHUT_RDWR);
+                    //shutdown(pc->_socket, SHUT_RDWR);
                     close(pc->_socket);
                     pc->OnClose();
 
@@ -188,7 +188,7 @@ void ServerImpl::OnRun() {
     }
     // epoll said it to stop
     for (const auto& connection : connections) {
-        shutdown(connection->_socket, SHUT_RDWR);
+        //shutdown(connection->_socket, SHUT_RDWR);
         close(connection->_socket);
         connection->OnClose();
 
