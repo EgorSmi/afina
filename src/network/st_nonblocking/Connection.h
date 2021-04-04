@@ -16,7 +16,7 @@ public:
         _event.data.ptr = this;
     }
 
-    inline bool isAlive() const { return true; }
+    inline bool isAlive() const { return flag_run; }
 
     void Start();
 
@@ -31,6 +31,8 @@ private:
 
     int _socket;
     struct epoll_event _event;
+
+    bool flag_run;
 };
 
 } // namespace STnonblock

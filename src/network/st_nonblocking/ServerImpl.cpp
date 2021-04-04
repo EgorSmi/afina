@@ -91,6 +91,11 @@ void ServerImpl::Stop() {
     if (eventfd_write(_event_fd, 1)) {
         throw std::runtime_error("Failed to wakeup workers");
     }
+
+    for (const auto& connection : connections)
+    {
+        shutdown(connection->_socket, SHUT_WR);
+    }
 }
 
 // See Server.h
@@ -140,6 +145,7 @@ void ServerImpl::OnRun() {
 
             // That is some connection!
             Connection *pc = static_cast<Connection *>(current_event.data.ptr);
+            connections.emplace(pc);
 
             auto old_mask = pc->_event.events;
             if ((current_event.events & EPOLLERR) || (current_event.events & EPOLLHUP)) {
@@ -162,6 +168,8 @@ void ServerImpl::OnRun() {
                     _logger->error("Failed to delete connection from epoll");
                 }
 
+                connections.erase(pc);
+                shutdown(pc->_socket, SHUT_RDWR);
                 close(pc->_socket);
                 pc->OnClose();
 
@@ -170,6 +178,8 @@ void ServerImpl::OnRun() {
                 if (epoll_ctl(epoll_descr, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
                     _logger->error("Failed to change connection event mask");
 
+                    connections.erase(pc);
+                    shutdown(pc->_socket, SHUT_RDWR);
                     close(pc->_socket);
                     pc->OnClose();
 
@@ -178,6 +188,15 @@ void ServerImpl::OnRun() {
             }
         }
     }
+    // epoll said it to stop
+    for (const auto& connection : connections) {
+        shutdown(connection->_socket, SHUT_RDWR);
+        close(connection->_socket);
+        connection->OnClose();
+
+        delete connection;
+    }
+
     _logger->warn("Acceptor stopped");
 }
 
