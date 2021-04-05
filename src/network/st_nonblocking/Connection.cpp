@@ -44,7 +44,7 @@ void Connection::DoRead()
     std::unique_ptr<Execute::Command> command_to_execute;
     try {
         int readed_bytes = -1;
-        if ((readed_bytes = read(_socket, client_buffer + pos, sizeof(client_buffer) - pos)) > 0) {
+        while ((readed_bytes = read(_socket, client_buffer + pos, sizeof(client_buffer) - pos)) > 0) {
             _logger->debug("Got {} bytes from socket", readed_bytes);
             pos += readed_bytes;
             while (pos > 0) {
