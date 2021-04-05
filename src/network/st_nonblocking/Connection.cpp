@@ -53,6 +53,7 @@ void Connection::DoRead()
                 if (!command_to_execute) {
                     std::size_t parsed = 0;
                     if (parser.Parse(client_buffer, pos, parsed)) {
+                        std::cout<<"parsed"<<std::endl;
                         _logger->debug("Found new command: {} in {} bytes", parser.Name(), parsed);
                         command_to_execute = parser.Build(arg_remains);
                         if (arg_remains > 0) {
@@ -89,6 +90,7 @@ void Connection::DoRead()
 
                     // Send response
                     result += "\r\n";
+                    std::cout<<result<<std::endl;
                     output_buffer.push_back(result);
                     if (!output_buffer.empty())
                     {
@@ -96,7 +98,7 @@ void Connection::DoRead()
                     }
                     if (output_buffer.size() > limit)
                     {
-                        _event.events &= ~EPOLLIN;
+                        _event.events = ~EPOLLIN;
                     }
                     // Prepare for the next command
                     command_to_execute.reset();
