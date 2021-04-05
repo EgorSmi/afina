@@ -44,7 +44,7 @@ void Connection::DoRead()
     std::unique_ptr<Execute::Command> command_to_execute;
     try {
         int readed_bytes = -1;
-        while ((readed_bytes = read(_socket, client_buffer + pos, sizeof(client_buffer) - pos)) > 0) {
+        if ((readed_bytes = read(_socket, client_buffer + pos, sizeof(client_buffer) - pos)) > 0) {
             _logger->debug("Got {} bytes from socket", readed_bytes);
             pos += readed_bytes;
             while (pos > 0) {
@@ -107,10 +107,12 @@ void Connection::DoRead()
                 }
             }
         }
-        if (readed_bytes == 0) {
+        if (readed_bytes != -1) {
+            std::cout<<"Closed"<<std::endl;
             flag_run = false;
             _logger->debug("Connection closed");
         } else {
+            std::cout<<"Error? "<<std::endl;
             throw std::runtime_error(std::string(strerror(errno)));
         }
     } catch (std::runtime_error &ex) {
@@ -125,6 +127,7 @@ void Connection::DoRead()
 // See Connection.h
 void Connection::DoWrite()
 {
+    std::cout<<"OnWrite"<<std::endl;
     _logger->debug("Write on socket {}", _socket);
     if (!output_buffer.empty())
     {
