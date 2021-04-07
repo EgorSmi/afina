@@ -108,11 +108,11 @@ void Connection::DoRead()
             }
         }
         if (readed_bytes != -1) {
-            std::cout<<"Closed"<<std::endl;
+            std::cout<<"Closed client_socket"<<std::endl;
             flag_run = false;
             _logger->debug("Connection closed");
         } else {
-            std::cout<<"Error? "<<std::endl;
+            //std::cout<<"Error? "<<std::endl;
             throw std::runtime_error(std::string(strerror(errno)));
         }
     } catch (std::runtime_error &ex) {
