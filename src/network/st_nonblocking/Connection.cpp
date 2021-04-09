@@ -167,7 +167,10 @@ void Connection::DoWrite()
             if (output_buffer.empty())
             {
                 _event.events &= ~EPOLLOUT;
-                flag_run = false; // nice rofl
+                if (pos == 0)
+                {
+                    flag_run = false;
+                }
             }
         }
         catch (std::runtime_error &ex) {
