@@ -91,7 +91,6 @@ void Connection::DoRead()
 
                     // Send response
                     result += "\r\n";
-                    //std::cout<<result<<std::endl;
                     output_buffer.push_back(result);
                     if (!output_buffer.empty())
                     {
@@ -109,24 +108,26 @@ void Connection::DoRead()
             }
         }
         if (readed_bytes != -1) {
+            if ((readed_bytes == 0) || (_event.events == EPOLLRDHUP))
+            {
+                connection_close = true;
+            }
             _logger->debug("Connection closed");
         } else {
-            //std::cout<<"Error? "<<std::endl;
-            throw std::runtime_error(std::string(strerror(errno)));
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                throw std::runtime_error(std::string(strerror(errno)));
+            }
         }
     } catch (std::runtime_error &ex) {
-        if (errno != EAGAIN && errno != EWOULDBLOCK)
-        {
             _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
             flag_run = false;
-        }
     }
 }
 
 // See Connection.h
 void Connection::DoWrite()
 {
-    //std::cout<<"OnWrite"<<std::endl;
     _logger->debug("Write on socket {}", _socket);
     if (!output_buffer.empty())
     {
@@ -134,18 +135,17 @@ void Connection::DoWrite()
         iovec vec[vec_size];
         try
         {
-            std::size_t num = 0;
-            vec[num].iov_base = &(output_buffer[num][0]) + output_offset;
-            vec[num].iov_len = output_buffer[num].size() - output_offset;
-            num++;
+            vec[0].iov_base = &(output_buffer[0][0]) + output_offset;
+            vec[0].iov_len = output_buffer[0].size() - output_offset;
+            std::size_t num = 1;
             while (num < output_buffer.size() && num < vec_size)
             {
                 vec[num].iov_base = &(output_buffer[num][0]);
                 vec[num].iov_len = output_buffer[num].size();
                 num++;
             }
-            int written_bytes = -1;
-            if ((written_bytes = writev(_socket, vec, num)) >= 0)
+            int written_bytes = writev(_socket, vec, num);
+            if (written_bytes >= 0)
             {
                 std::size_t i = 0;
                 while (written_bytes >= vec[i].iov_len)
@@ -158,27 +158,27 @@ void Connection::DoWrite()
             }
             else
             {
-                throw std::runtime_error(std::string(strerror(errno)));
+                if (errno != EAGAIN && errno != EWOULDBLOCK)
+                {
+                    throw std::runtime_error(std::string(strerror(errno)));
+                }
             }
-            if (output_buffer.size() <= limit - 20)
+            if (output_buffer.size() <= limit - eps)
             {
                 _event.events |= EPOLLIN;
             }
             if (output_buffer.empty())
             {
                 _event.events &= ~EPOLLOUT;
-                if (pos == 0)
+                if (connection_close)
                 {
                     flag_run = false;
                 }
             }
         }
         catch (std::runtime_error &ex) {
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
-                flag_run = false;
-            }
+            _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
+            flag_run = false;
         }
     }
 }

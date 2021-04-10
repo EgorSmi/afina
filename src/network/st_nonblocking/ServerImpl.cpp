@@ -151,7 +151,6 @@ void ServerImpl::OnRun() {
 
             // That is some connection!
             Connection *pc = static_cast<Connection *>(current_event.data.ptr);
-            connections.insert(pc);
 
             auto old_mask = pc->_event.events;
             if ((current_event.events & EPOLLERR) || (current_event.events & EPOLLHUP)) {
@@ -175,7 +174,6 @@ void ServerImpl::OnRun() {
                 }
 
                 connections.erase(pc);
-                //shutdown(pc->_socket, SHUT_RDWR);
                 close(pc->_socket);
                 pc->OnClose();
 
@@ -185,7 +183,6 @@ void ServerImpl::OnRun() {
                     _logger->error("Failed to change connection event mask");
 
                     connections.erase(pc);
-                    //shutdown(pc->_socket, SHUT_RDWR);
                     close(pc->_socket);
                     pc->OnClose();
 
@@ -196,7 +193,6 @@ void ServerImpl::OnRun() {
     }
     // epoll said it to stop
     for (const auto& connection : connections) {
-        //shutdown(connection->_socket, SHUT_RDWR);
         close(connection->_socket);
         connection->OnClose();
 
@@ -245,6 +241,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
                 pc->OnError();
                 delete pc;
             }
+            connections.insert(pc);
         }
     }
 }

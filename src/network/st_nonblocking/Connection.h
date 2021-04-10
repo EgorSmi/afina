@@ -67,11 +67,13 @@ private:
 
     struct epoll_event _event;
 
+    bool connection_close = false;
     bool flag_run;
     char client_buffer[4096] = "";
     std::size_t pos = 0;
     std::deque<std::string> output_buffer;
     std::size_t limit = 100;
+    std::size_t eps = 20;
     std::size_t output_offset = 0;
 };
 
