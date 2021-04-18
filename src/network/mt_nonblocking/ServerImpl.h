@@ -2,7 +2,9 @@
 #define AFINA_NETWORK_MT_NONBLOCKING_SERVER_H
 
 #include <thread>
-#include <vector>
+#include <set>
+
+#include "Connection.h"
 
 #include <afina/network/Server.h>
 
@@ -37,7 +39,6 @@ public:
 
 protected:
     void OnRun();
-    void OnNewConnection();
 
 private:
     // logger to use
@@ -63,6 +64,9 @@ private:
 
     // threads serving read/write requests
     std::vector<Worker> _workers;
+
+    std::set<Connection*> connections;
+    std::mutex _m;
 };
 
 } // namespace MTnonblock
