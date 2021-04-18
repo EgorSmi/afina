@@ -38,10 +38,6 @@ void Connection::OnClose()
 void Connection::DoRead()
 {
     _logger->debug("Read on socket {}", _socket);
-    std::size_t arg_remains = 0;
-    Protocol::Parser parser;
-    std::string argument_for_command;
-    std::unique_ptr<Execute::Command> command_to_execute;
     try {
         int readed_bytes = -1;
         while ((readed_bytes = read(_socket, client_buffer + pos, sizeof(client_buffer) - pos)) > 0) {
@@ -108,7 +104,7 @@ void Connection::DoRead()
             }
         }
         if (readed_bytes != -1) {
-            if ((readed_bytes == 0) || (_event.events == EPOLLRDHUP))
+            if (readed_bytes == 0)
             {
                 connection_close = true;
             }
@@ -120,8 +116,8 @@ void Connection::DoRead()
             }
         }
     } catch (std::runtime_error &ex) {
-            _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
-            flag_run = false;
+        _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
+        flag_run = false;
     }
 }
 
@@ -131,8 +127,8 @@ void Connection::DoWrite()
     _logger->debug("Write on socket {}", _socket);
     if (!output_buffer.empty())
     {
-        const std::size_t vec_size = 16;
-        iovec vec[vec_size];
+        const std::size_t vec_size = 64;
+        iovec vec[vec_size] = {};
         try
         {
             vec[0].iov_base = &(output_buffer[0][0]) + output_offset;
@@ -148,7 +144,7 @@ void Connection::DoWrite()
             if (written_bytes >= 0)
             {
                 std::size_t i = 0;
-                while (written_bytes >= vec[i].iov_len)
+                while (written_bytes >= vec[i].iov_len && !output_buffer.empty())
                 {
                     written_bytes -= vec[i].iov_len;
                     output_buffer.pop_front();

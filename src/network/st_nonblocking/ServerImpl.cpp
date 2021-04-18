@@ -157,6 +157,7 @@ void ServerImpl::OnRun() {
                 pc->OnError();
             } else if (current_event.events & EPOLLRDHUP) {
                 pc->OnClose();
+                pc->connection_close = true;
             } else {
                 // Depends on what connection wants...
                 if (current_event.events & EPOLLIN) {
@@ -172,20 +173,16 @@ void ServerImpl::OnRun() {
                 if (epoll_ctl(epoll_descr, EPOLL_CTL_DEL, pc->_socket, &pc->_event)) {
                     _logger->error("Failed to delete connection from epoll");
                 }
-
                 connections.erase(pc);
                 close(pc->_socket);
                 pc->OnClose();
-
                 delete pc;
             } else if (pc->_event.events != old_mask) {
                 if (epoll_ctl(epoll_descr, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
                     _logger->error("Failed to change connection event mask");
-
                     connections.erase(pc);
                     close(pc->_socket);
                     pc->OnClose();
-
                     delete pc;
                 }
             }
@@ -195,10 +192,8 @@ void ServerImpl::OnRun() {
     for (const auto& connection : connections) {
         close(connection->_socket);
         connection->OnClose();
-
         delete connection;
     }
-
     _logger->warn("Acceptor stopped");
 }
 
@@ -241,7 +236,10 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
                 pc->OnError();
                 delete pc;
             }
-            connections.insert(pc);
+            else
+            {
+                connections.insert(pc);
+            }
         }
     }
 }

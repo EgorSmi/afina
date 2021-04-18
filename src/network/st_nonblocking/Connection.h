@@ -67,9 +67,13 @@ private:
 
     struct epoll_event _event;
 
+    Protocol::Parser parser;
+    std::unique_ptr<Execute::Command> command_to_execute;
     bool connection_close = false;
     bool flag_run;
     char client_buffer[4096] = "";
+    std::size_t arg_remains = 0;
+    std::string argument_for_command;
     std::size_t pos = 0;
     std::deque<std::string> output_buffer;
     std::size_t limit = 100;
