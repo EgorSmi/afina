@@ -33,7 +33,7 @@ namespace MTnonblock {
 ServerImpl::ServerImpl(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) : Server(ps, pl) {}
 
 // See Server.h
-ServerImpl::~ServerImpl() {/*Stop(); Join();*/}
+ServerImpl::~ServerImpl() {}
 
 // See Server.h
 void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) {
@@ -100,7 +100,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 
     _workers.reserve(n_workers);
     for (int i = 0; i < n_workers; i++) {
-        _workers.emplace_back(pStorage, pLogging);
+        _workers.emplace_back(pStorage, pLogging, this);
         _workers.back().Start(_data_epoll_fd);
     }
 
@@ -118,13 +118,13 @@ void ServerImpl::Stop() {
     for (auto &w : _workers) {
         w.Stop();
     }
-    // Wakeup threads that are sleep on epoll_wait
-    for (int n=0; n<_workers.size(); n++)
-    {
+    //for (int n=0; n<_workers.size(); n++)
+    //{
+        // Wakeup threads that are sleep on epoll_wait
         if (eventfd_write(_event_fd, 1)) {
             throw std::runtime_error("Failed to wakeup workers");
         }
-    }
+    //}
     {
         std::lock_guard<std::mutex> lock(_m);
         for (const auto& connection : connections)
@@ -240,6 +240,11 @@ void ServerImpl::OnRun() {
         }
     }
     _logger->warn("Acceptor stopped");
+}
+
+void ServerImpl::EraseConnection(Connection* c)
+{
+    connections.erase(c);
 }
 
 } // namespace MTnonblock

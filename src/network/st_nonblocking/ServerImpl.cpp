@@ -92,7 +92,7 @@ void ServerImpl::Stop() {
     _logger->warn("Stop network service");
     for (const auto& connection : connections)
     {
-        shutdown(connection->_socket, SHUT_WR);
+        shutdown(connection->_socket, SHUT_RD);
     }
     // Wakeup threads that are sleep on epoll_wait
     if (eventfd_write(_event_fd, 1)) {

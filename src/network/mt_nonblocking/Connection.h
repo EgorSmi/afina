@@ -66,10 +66,14 @@ private:
     std::shared_ptr<spdlog::logger> _logger;
 
     struct epoll_event _event;
-    std::mutex _m;
+
+    Protocol::Parser parser;
+    std::unique_ptr<Execute::Command> command_to_execute;
     bool connection_close = false;
-    std::atomic_bool flag_run;
+    std::atomic<bool> flag_run;
     char client_buffer[4096] = "";
+    std::size_t arg_remains = 0;
+    std::string argument_for_command;
     std::size_t pos = 0;
     std::deque<std::string> output_buffer;
     std::size_t limit = 100;
