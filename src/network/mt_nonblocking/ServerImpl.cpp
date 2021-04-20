@@ -98,6 +98,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
         throw std::runtime_error("Failed to add eventfd descriptor to epoll");
     }
 
+    _n_workers = n_workers;
     _workers.reserve(n_workers);
     for (int i = 0; i < n_workers; i++) {
         _workers.emplace_back(pStorage, pLogging, this);
@@ -105,7 +106,6 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
     }
 
     // Start acceptors
-    _n_acceptors = n_acceptors;
     _acceptors.reserve(n_acceptors);
     for (int i = 0; i < n_acceptors; i++) {
         _acceptors.emplace_back(&ServerImpl::OnRun, this);
@@ -229,17 +229,6 @@ void ServerImpl::OnRun() {
             }
         }
     }
-    {
-        std::lock_guard<std::mutex> lock(_m);
-        if (_n_acceptors == 1) {
-            for (const auto &connection : connections) {
-                close(connection->_socket);
-                connection->OnClose();
-                delete connection;
-            }
-        }
-        _n_acceptors--;
-    }
     _logger->warn("Acceptor stopped");
 }
 
@@ -247,6 +236,29 @@ void ServerImpl::EraseConnection(Connection* c)
 {
     std::lock_guard<std::mutex> _lock(_m);
     connections.erase(c);
+}
+
+bool ServerImpl::LastWorker()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    return _n_workers == 1;
+}
+
+void ServerImpl::DecreaseWorkers()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    _n_workers--;
+}
+
+void ServerImpl::CloseConnections()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    for (const auto& connection : connections)
+    {
+        close(connection->_socket);
+        connection->OnClose();
+        delete connection;
+    }
 }
 
 } // namespace MTnonblock

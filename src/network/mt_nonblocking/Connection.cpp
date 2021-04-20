@@ -125,6 +125,7 @@ void Connection::DoRead()
 // See Connection.h
 void Connection::DoWrite()
 {
+    std::atomic_thread_fence(std::memory_order_acquire);
     _logger->debug("Write on socket {}", _socket);
     const std::size_t vec_size = 16;
     iovec vec[vec_size] = {};
@@ -132,7 +133,6 @@ void Connection::DoWrite()
     {
         return;
     }
-    std::atomic_thread_fence(std::memory_order_acquire);
     try
     {
         vec[0].iov_base = &(output_buffer[0][0]) + output_offset;

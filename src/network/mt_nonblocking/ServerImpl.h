@@ -38,6 +38,10 @@ public:
     void Join() override;
 
     void EraseConnection(Connection* c);
+    bool LastWorker();
+    void DecreaseWorkers();
+    void CloseConnections();
+
 
 protected:
     void OnRun();
@@ -58,7 +62,6 @@ private:
     // but share global server socket
     std::vector<std::thread> _acceptors;
 
-    int _n_acceptors;
 
     // EPOLL instance shared between workers
     int _data_epoll_fd;
@@ -68,6 +71,7 @@ private:
 
     // threads serving read/write requests
     std::vector<Worker> _workers;
+    int _n_workers;
 
     std::set<Connection*> connections;
     std::mutex _m;

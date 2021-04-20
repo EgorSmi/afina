@@ -120,8 +120,8 @@ void Worker::OnRun() {
                     pconn->OnError();
                     {
                         std::lock_guard<std::mutex> lock(_m);
-                        _server->EraseConnection(pconn);
                         close(pconn->_socket);
+                        _server->EraseConnection(pconn);
                         delete pconn;
                     }
                 }
@@ -133,14 +133,19 @@ void Worker::OnRun() {
                 }
                 {
                     std::lock_guard<std::mutex> lock(_m);
-                    _server->EraseConnection(pconn);
                     close(pconn->_socket);
+                    _server->EraseConnection(pconn);
                     delete pconn;
                 }
             }
         }
         // TODO: Select timeout...
     }
+    if (_server->LastWorker())
+    {
+        _server->CloseConnections();
+    }
+    _server->DecreaseWorkers();
     _logger->warn("Worker stopped");
 }
 
