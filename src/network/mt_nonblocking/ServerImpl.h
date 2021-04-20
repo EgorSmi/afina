@@ -38,7 +38,6 @@ public:
     void Join() override;
 
     void EraseConnection(Connection* c);
-    void closeAliveConections();
 
 protected:
     void OnRun();

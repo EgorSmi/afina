@@ -229,11 +229,17 @@ void ServerImpl::OnRun() {
             }
         }
     }
-    if (_n_acceptors == 1)
     {
-        this->closeAliveConections();
+        std::lock_guard<std::mutex> lock(_m);
+        if (_n_acceptors == 1) {
+            for (const auto &connection : connections) {
+                close(connection->_socket);
+                connection->OnClose();
+                delete connection;
+            }
+        }
+        _n_acceptors--;
     }
-    _n_acceptors--;
     _logger->warn("Acceptor stopped");
 }
 
@@ -241,16 +247,6 @@ void ServerImpl::EraseConnection(Connection* c)
 {
     std::lock_guard<std::mutex> _lock(_m);
     connections.erase(c);
-}
-
-void ServerImpl::closeAliveConections()
-{
-    std::lock_guard<std::mutex> lock(_m);
-    for (const auto& connection : connections) {
-        close(connection->_socket);
-        connection->OnClose();
-        delete connection;
-    }
 }
 
 } // namespace MTnonblock
