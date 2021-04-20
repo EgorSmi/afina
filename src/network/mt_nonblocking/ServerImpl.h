@@ -38,6 +38,7 @@ public:
     void Join() override;
 
     void EraseConnection(Connection* c);
+    void closeAliveConections();
 
 protected:
     void OnRun();
@@ -57,6 +58,8 @@ private:
     // Threads that accepts new connections, each has private epoll instance
     // but share global server socket
     std::vector<std::thread> _acceptors;
+
+    int _n_acceptors;
 
     // EPOLL instance shared between workers
     int _data_epoll_fd;

@@ -105,6 +105,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
     }
 
     // Start acceptors
+    _n_acceptors = n_acceptors;
     _acceptors.reserve(n_acceptors);
     for (int i = 0; i < n_acceptors; i++) {
         _acceptors.emplace_back(&ServerImpl::OnRun, this);
@@ -118,13 +119,10 @@ void ServerImpl::Stop() {
     for (auto &w : _workers) {
         w.Stop();
     }
-    //for (int n=0; n<_workers.size(); n++)
-    //{
-        // Wakeup threads that are sleep on epoll_wait
-        if (eventfd_write(_event_fd, 1)) {
-            throw std::runtime_error("Failed to wakeup workers");
-        }
-    //}
+    // Wakeup threads that are sleep on epoll_wait
+    if (eventfd_write(_event_fd, 1)) {
+        throw std::runtime_error("Failed to wakeup workers");
+    }
     {
         std::lock_guard<std::mutex> lock(_m);
         for (const auto& connection : connections)
@@ -142,14 +140,6 @@ void ServerImpl::Join() {
     }
     for (auto &w : _workers) {
         w.Join();
-    }
-    {
-        std::lock_guard<std::mutex> lock(_m);
-        for (const auto& connection : connections) {
-            close(connection->_socket);
-            connection->OnClose();
-            delete connection;
-        }
     }
 }
 
@@ -239,12 +229,28 @@ void ServerImpl::OnRun() {
             }
         }
     }
+    if (_n_acceptors == 1)
+    {
+        this->closeAliveConections();
+    }
+    _n_acceptors--;
     _logger->warn("Acceptor stopped");
 }
 
 void ServerImpl::EraseConnection(Connection* c)
 {
+    std::lock_guard<std::mutex> _lock(_m);
     connections.erase(c);
+}
+
+void ServerImpl::closeAliveConections()
+{
+    std::lock_guard<std::mutex> lock(_m);
+    for (const auto& connection : connections) {
+        close(connection->_socket);
+        connection->OnClose();
+        delete connection;
+    }
 }
 
 } // namespace MTnonblock
