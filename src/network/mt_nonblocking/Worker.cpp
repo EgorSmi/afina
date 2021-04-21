@@ -117,9 +117,9 @@ void Worker::OnRun() {
                 int epoll_ctl_retval;
                 if ((epoll_ctl_retval = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, pconn->_socket, &pconn->_event))) {
                     _logger->debug("epoll_ctl failed during connection rearm: error {}", epoll_ctl_retval);
-                    pconn->OnError();
                     {
                         std::lock_guard<std::mutex> lock(_m);
+                        pconn->OnError();
                         close(pconn->_socket);
                         _server->EraseConnection(pconn);
                         delete pconn;
@@ -144,6 +144,7 @@ void Worker::OnRun() {
     if (_server->LastWorker())
     {
         _server->CloseConnections();
+        _server->CloseServerSocket();
     }
     _server->DecreaseWorkers();
     _logger->warn("Worker stopped");

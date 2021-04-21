@@ -130,7 +130,6 @@ void ServerImpl::Stop() {
             shutdown(connection->_socket, SHUT_RD);
         }
     }
-    close(_server_socket);
 }
 
 // See Server.h
@@ -259,6 +258,11 @@ void ServerImpl::CloseConnections()
         connection->OnClose();
         delete connection;
     }
+}
+
+void ServerImpl::CloseServerSocket()
+{
+    close(_server_socket);
 }
 
 } // namespace MTnonblock
