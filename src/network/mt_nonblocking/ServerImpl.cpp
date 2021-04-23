@@ -256,6 +256,7 @@ void ServerImpl::CloseConnections()
     {
         close(connection->_socket);
         connection->OnClose();
+        connections.erase(connection);
         delete connection;
     }
 }
