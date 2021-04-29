@@ -150,6 +150,23 @@ void Engine::unblock(void *coro)
         alive = unblocking;
     }
 }
+Engine::~Engine()
+{
+    while (alive != nullptr)
+    {
+        context* tmp = alive;
+        delete[] std::get<0>(tmp->Stack);
+        delete tmp;
+        alive = alive->next;
+    }
+    while (blocked != nullptr)
+    {
+        context* tmp = blocked;
+        delete[] std::get<0>(tmp->Stack);
+        delete tmp;
+        blocked = blocked->next;
+    }
+}
 
 } // namespace Coroutine
 } // namespace Afina

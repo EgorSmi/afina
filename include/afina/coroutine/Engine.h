@@ -89,9 +89,10 @@ protected:
 
 public:
     Engine(unblocker_func unblocker = null_unblocker)
-        : StackBottom(0), cur_routine(nullptr), alive(nullptr), _unblocker(unblocker) {}
+        : StackBottom(0), cur_routine(nullptr), alive(nullptr), blocked(nullptr), _unblocker(unblocker) {}
     Engine(Engine &&) = delete;
     Engine(const Engine &) = delete;
+    ~Engine();
 
     /**
      * Gives up current routine execution and let engine to schedule other one. It is not defined when
