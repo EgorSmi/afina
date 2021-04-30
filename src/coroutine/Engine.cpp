@@ -3,6 +3,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
+#include <cassert>
 
 #include <cstring>
 
@@ -12,11 +13,16 @@ namespace Coroutine {
 void Engine::Store(context &ctx)
 {
     char c;
-    ctx.Low = &c;
+    if (&c <= ctx.Low)
+    {
+        ctx.Low = &c;
+    }
+    else
+    {
+        ctx.Hight = &c;
+    }
 
-    // where does stack grow?
     std::size_t stack_size = ctx.Hight - ctx.Low;
-    //std::cout<<stack_size<<std::endl;
     if (std::get<1>(ctx.Stack) < stack_size || 2 * std::get<1>(ctx.Stack) > stack_size)
     {
         delete[] std::get<0>(ctx.Stack);
@@ -58,20 +64,22 @@ void Engine::yield()
 
 void Engine::sched(void *coroutine)
 {
-    if ((coroutine == nullptr) || (coroutine == cur_routine))
+    if (coroutine == cur_routine)
+    {
+        return;
+    }
+    if (coroutine == nullptr)
     {
         yield();
         return;
     }
-    if (cur_routine != nullptr)
+    assert(cur_routine != nullptr);
+    if (cur_routine != idle_ctx)
     {
-        if (cur_routine != idle_ctx)
+        if (setjmp(cur_routine->Environment) > 0)
         {
-            if (setjmp(cur_routine->Environment) > 0)
-            {
-                // start coro
-                return;
-            }
+            // start coro
+            return;
         }
         Store(*cur_routine); // save stack
     }
