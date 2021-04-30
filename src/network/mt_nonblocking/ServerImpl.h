@@ -2,7 +2,9 @@
 #define AFINA_NETWORK_MT_NONBLOCKING_SERVER_H
 
 #include <thread>
-#include <vector>
+#include <set>
+
+#include "Connection.h"
 
 #include <afina/network/Server.h>
 
@@ -35,9 +37,14 @@ public:
     // See Server.h
     void Join() override;
 
+    void EraseConnection(Connection* c);
+    bool LastWorker();
+    void DecreaseWorkers();
+    void CloseConnections();
+
+
 protected:
     void OnRun();
-    void OnNewConnection();
 
 private:
     // logger to use
@@ -55,6 +62,7 @@ private:
     // but share global server socket
     std::vector<std::thread> _acceptors;
 
+
     // EPOLL instance shared between workers
     int _data_epoll_fd;
 
@@ -63,6 +71,10 @@ private:
 
     // threads serving read/write requests
     std::vector<Worker> _workers;
+    int _n_workers;
+
+    std::set<Connection*> connections;
+    std::mutex _m;
 };
 
 } // namespace MTnonblock
