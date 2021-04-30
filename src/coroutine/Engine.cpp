@@ -25,7 +25,7 @@ void Engine::Store(context &ctx)
     std::size_t stack_size = ctx.Hight - ctx.Low;
     if (std::get<1>(ctx.Stack) < stack_size || 2 * std::get<1>(ctx.Stack) > stack_size)
     {
-        delete[] std::get<0>(ctx.Stack);
+        DeleteStack(ctx);
         std::get<0>(ctx.Stack) = new char[stack_size];
         std::get<1>(ctx.Stack) = stack_size;
     }
@@ -68,7 +68,7 @@ void Engine::sched(void *coroutine)
     {
         return;
     }
-    if (coroutine == nullptr)
+    else if (coroutine == nullptr)
     {
         yield();
         return;
@@ -163,17 +163,20 @@ Engine::~Engine()
     while (alive != nullptr)
     {
         context* tmp = alive;
-        delete[] std::get<0>(tmp->Stack);
         delete tmp;
         alive = alive->next;
     }
     while (blocked != nullptr)
     {
         context* tmp = blocked;
-        delete[] std::get<0>(tmp->Stack);
         delete tmp;
         blocked = blocked->next;
     }
+}
+
+void Engine::DeleteStack(context& ctx)
+{
+    delete[] std::get<0>(ctx.Stack);
 }
 
 } // namespace Coroutine
