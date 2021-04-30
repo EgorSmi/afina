@@ -41,7 +41,6 @@ public:
     bool LastWorker();
     void DecreaseWorkers();
     void CloseConnections();
-    void CloseServerSocket();
 
 
 protected:

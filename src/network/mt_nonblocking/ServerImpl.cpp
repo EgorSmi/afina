@@ -228,6 +228,7 @@ void ServerImpl::OnRun() {
             }
         }
     }
+    close(_server_socket);
     _logger->warn("Acceptor stopped");
 }
 
@@ -259,11 +260,6 @@ void ServerImpl::CloseConnections()
         connections.erase(connection);
         delete connection;
     }
-}
-
-void ServerImpl::CloseServerSocket()
-{
-    close(_server_socket);
 }
 
 } // namespace MTnonblock

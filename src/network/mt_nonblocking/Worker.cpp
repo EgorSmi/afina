@@ -144,7 +144,6 @@ void Worker::OnRun() {
     if (_server->LastWorker())
     {
         _server->CloseConnections();
-        _server->CloseServerSocket();
     }
     _server->DecreaseWorkers();
     _logger->warn("Worker stopped");
