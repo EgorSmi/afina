@@ -21,8 +21,8 @@ namespace Network {
 namespace MTnonblock {
 
 // See Worker.h
-Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl)
-    : _pStorage(ps), _pLogging(pl), isRunning(false), _epoll_fd(-1) {
+Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, ServerImpl* server)
+    : _pStorage(ps), _pLogging(pl), _server(server), isRunning(false), _epoll_fd(-1) {
     // TODO: implementation here
 }
 
@@ -97,6 +97,7 @@ void Worker::OnRun() {
                 pconn->OnError();
             } else if (current_event.events & EPOLLRDHUP) {
                 _logger->debug("Got EPOLLRDHUP, value of returned events: {}", current_event.events);
+                pconn->connection_close = true;
                 pconn->OnClose();
             } else {
                 // Depends on what connection wants...
@@ -116,8 +117,13 @@ void Worker::OnRun() {
                 int epoll_ctl_retval;
                 if ((epoll_ctl_retval = epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, pconn->_socket, &pconn->_event))) {
                     _logger->debug("epoll_ctl failed during connection rearm: error {}", epoll_ctl_retval);
-                    pconn->OnError();
-                    delete pconn;
+                    {
+                        std::lock_guard<std::mutex> lock(_m);
+                        pconn->OnError();
+                        close(pconn->_socket);
+                        _server->EraseConnection(pconn);
+                        delete pconn;
+                    }
                 }
             }
             // Or delete closed one
@@ -125,11 +131,22 @@ void Worker::OnRun() {
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, pconn->_socket, &pconn->_event)) {
                     std::cerr << "Failed to delete connection!" << std::endl;
                 }
-                delete pconn;
+                {
+                    std::lock_guard<std::mutex> lock(_m);
+                    close(pconn->_socket);
+                    _server->EraseConnection(pconn);
+                    delete pconn;
+                }
             }
         }
         // TODO: Select timeout...
     }
+    if (_server->LastWorker())
+    {
+        _server->CloseConnections();
+        _server->CloseServerSocket();
+    }
+    _server->DecreaseWorkers();
     _logger->warn("Worker stopped");
 }
 

@@ -60,6 +60,10 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
     }
 
     int opts = 1;
+    if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &opts, sizeof(opts)) == -1) {
+        close(_server_socket);
+        throw std::runtime_error("Socket setsockopt() failed: " + std::string(strerror(errno)));
+    }
     if (setsockopt(_server_socket, SOL_SOCKET, (SO_KEEPALIVE), &opts, sizeof(opts)) == -1) {
         close(_server_socket);
         throw std::runtime_error("Socket setsockopt() failed: " + std::string(strerror(errno)));
@@ -94,9 +98,10 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
         throw std::runtime_error("Failed to add eventfd descriptor to epoll");
     }
 
+    _n_workers = n_workers;
     _workers.reserve(n_workers);
     for (int i = 0; i < n_workers; i++) {
-        _workers.emplace_back(pStorage, pLogging);
+        _workers.emplace_back(pStorage, pLogging, this);
         _workers.back().Start(_data_epoll_fd);
     }
 
@@ -114,10 +119,16 @@ void ServerImpl::Stop() {
     for (auto &w : _workers) {
         w.Stop();
     }
-
     // Wakeup threads that are sleep on epoll_wait
     if (eventfd_write(_event_fd, 1)) {
         throw std::runtime_error("Failed to wakeup workers");
+    }
+    {
+        std::lock_guard<std::mutex> lock(_m);
+        for (const auto& connection : connections)
+        {
+            shutdown(connection->_socket, SHUT_RD);
+        }
     }
 }
 
@@ -126,7 +137,6 @@ void ServerImpl::Join() {
     for (auto &t : _acceptors) {
         t.join();
     }
-
     for (auto &w : _workers) {
         w.Join();
     }
@@ -155,7 +165,7 @@ void ServerImpl::OnRun() {
     }
 
     bool run = true;
-    std::array<struct epoll_event, 64> mod_list;
+    std::array<struct epoll_event, 64> mod_list = {};
     while (run) {
         int nmod = epoll_wait(acceptor_epoll, &mod_list[0], mod_list.size(), -1);
         _logger->debug("Acceptor wokeup: {} events", nmod);
@@ -193,7 +203,7 @@ void ServerImpl::OnRun() {
                 }
 
                 // Register the new FD to be monitored by epoll.
-                Connection *pc = new Connection(infd);
+                Connection *pc = new(std::nothrow) Connection(infd, pStorage, _logger);
                 if (pc == nullptr) {
                     throw std::runtime_error("Failed to allocate connection");
                 }
@@ -205,14 +215,55 @@ void ServerImpl::OnRun() {
                     int epoll_ctl_retval;
                     if ((epoll_ctl_retval = epoll_ctl(_data_epoll_fd, EPOLL_CTL_ADD, pc->_socket, &pc->_event))) {
                         _logger->debug("epoll_ctl failed during connection register in workers'epoll: error {}", epoll_ctl_retval);
+                        close(pc->_socket);
                         pc->OnError();
                         delete pc;
+                    }
+                    else
+                    {
+                        std::lock_guard<std::mutex> lock(_m);
+                        connections.insert(pc);
                     }
                 }
             }
         }
     }
     _logger->warn("Acceptor stopped");
+}
+
+void ServerImpl::EraseConnection(Connection* c)
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    connections.erase(c);
+}
+
+bool ServerImpl::LastWorker()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    return _n_workers == 1;
+}
+
+void ServerImpl::DecreaseWorkers()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    _n_workers--;
+}
+
+void ServerImpl::CloseConnections()
+{
+    std::lock_guard<std::mutex> _lock(_m);
+    for (const auto& connection : connections)
+    {
+        close(connection->_socket);
+        connection->OnClose();
+        connections.erase(connection);
+        delete connection;
+    }
+}
+
+void ServerImpl::CloseServerSocket()
+{
+    close(_server_socket);
 }
 
 } // namespace MTnonblock
